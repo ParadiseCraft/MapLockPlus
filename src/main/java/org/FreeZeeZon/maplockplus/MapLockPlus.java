@@ -1,6 +1,7 @@
 package org.FreeZeeZon.maplockplus;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Material;
@@ -93,10 +94,12 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         ownerFormatRaw = getConfig().getString("lore.owner-format", "&7Owner: &f%owner%");
 
         lockedMapLore = new ArrayList<>();
-        getConfig().getStringList("lore.locked-map").forEach(line -> lockedMapLore.add(serializer.deserialize(line)));
+        getConfig().getStringList("lore.locked-map").forEach(line ->
+                lockedMapLore.add(serializer.deserialize(line).decoration(TextDecoration.ITALIC, false)));
 
         anonymousMapLore = new ArrayList<>();
-        getConfig().getStringList("lore.anonymous-map").forEach(line -> anonymousMapLore.add(serializer.deserialize(line)));
+        getConfig().getStringList("lore.anonymous-map").forEach(line ->
+                anonymousMapLore.add(serializer.deserialize(line).decoration(TextDecoration.ITALIC, false)));
     }
 
     // ============ TAB COMPLETER ============
@@ -148,16 +151,12 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         }
 
         // --- DETERMINE ACTION ---
-        String action = "lock";
-        if (args.length > 0) {
-            String arg = args[0].toLowerCase();
-            action = switch (arg) {
-                case "unlock" -> "unlock";
-                case "anon", "anonymous", "anonim" -> "anon";
-                case "lock" -> "lock";
-                default -> action;
-            };
-        }
+        String inputArg = args.length > 0 ? args[0].toLowerCase() : "lock";
+        String action = switch (inputArg) {
+            case "unlock" -> "unlock";
+            case "anon", "anonymous", "anonim" -> "anon";
+            default -> "lock";
+        };
 
         // --- FIND MAP (MainHand -> OffHand) ---
         ItemStack itemToCheck = player.getInventory().getItemInMainHand();
@@ -225,7 +224,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             lore.addAll(lockedMapLore);
             if (showOwnerInLore) {
                 String ownerLine = ownerFormatRaw.replace("%owner%", player.getName());
-                lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(ownerLine));
+                lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(ownerLine).decoration(TextDecoration.ITALIC, false));
             }
         }
 

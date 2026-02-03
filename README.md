@@ -7,11 +7,12 @@
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/maplock` | Lock/unlock the map you're holding |
-| `/maplock anon` | Lock map anonymously (hides owner name) |
-| `/maplock reload` | Reload configuration |
+| Command           | Description                             |
+|-------------------|-----------------------------------------|
+| `/maplock [lock]` | Lock the map you're holding             |
+| `/maplock unlock` | Unlock the map you're holding           |
+| `/maplock anon`   | Lock map anonymously (hides owner name) |
+| `/maplock reload` | Reload configuration                    |
 
 **Aliases:** `/ml`, `/lockmap`
 
@@ -22,15 +23,16 @@
 2. Type `/maplock` to lock it
 3. The map now displays a "locked" indicator in its lore
 4. Nobody can copy this map through any crafting method
-5. Only you can unlock it by using `/maplock` again
+5. Only you can unlock it by using `/maplock unlock`
 
 ---
 
 
 ## Permissions
 
-| Permission | Description | Default |
-|------------|-------------|---------|
-| `maplock.use` | Lock and unlock maps | Everyone |
-| `maplock.reload` | Reload config | OP |
-| `maplock.*` | All permissions | OP |
+| Permission       | Description          | Default  |
+|------------------|----------------------|----------|
+| `maplock.use`    | Lock and unlock maps | Everyone |
+| `maplock.reload` | Reload config        | OP       |
+| `maplock.admin`  | Unlock any maps      | OP       |
+| `maplock.*`      | All permissions      | OP       |
