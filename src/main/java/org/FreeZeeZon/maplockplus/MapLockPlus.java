@@ -1,7 +1,6 @@
 package org.FreeZeeZon.maplockplus;
 
 import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -27,6 +26,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
 
@@ -51,42 +51,22 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
     private boolean showOwnerInLore;
     private String ownerFormat;
 
-    // Crafter support (1.21+)
-    private boolean crafterSupported = false;
+    // Crafter support (1.21+) || We support only 1.21+
+    private final boolean crafterSupported = true;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         loadMessages();
-        checkCrafterSupport();
         getServer().getPluginManager().registerEvents(this, this);
 
         // Register TabCompleter
         if (getCommand("maplock") != null) {
-            getCommand("maplock").setTabCompleter(this);
+            Objects.requireNonNull(getCommand("maplock")).setTabCompleter(this);
         }
 
         getLogger().info("MapLockPlus enabled!");
-        // You can find the plugin id of your plugins on
-        // the page https://bstats.org/what-is-my-plugin-id
-        int pluginId =28376/* INSERT PLUGIN ID HERE */;
-        Metrics metrics = new Metrics(this, pluginId);
-
-        // Optional: Add custom charts
-        metrics.addCustomChart(
-                new SimplePie("chart_id", () -> "My value")
-        );
-    }
-
-    private void checkCrafterSupport() {
-        try {
-            InventoryType.valueOf("CRAFTER");
-            crafterSupported = true;
-            getLogger().info("Crafter supported (1.21+)");
-        } catch (IllegalArgumentException e) {
-            crafterSupported = false;
-            getLogger().info("Crafter not supported (version < 1.21)");
-        }
+        new Metrics(this, 28376);
     }
 
     @Override
@@ -138,7 +118,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             List<String> completions = new ArrayList<>();
             String input = args[0].toLowerCase();
 
-            // Add "anon" option
+            // Add the "anon" option
             if ("anon".startsWith(input) || "anonim".startsWith(input) || "anonymous".startsWith(input)) {
                 completions.add("anon");
             }
@@ -151,7 +131,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             return completions;
         }
 
-        // Return empty list to prevent player name suggestions
+        // Return an empty list to prevent player name suggestions
         return Collections.emptyList();
     }
 
@@ -171,12 +151,10 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             return true;
         }
 
-        if (!(sender instanceof Player)) {
+        if (!(sender instanceof Player player)) {
             sender.sendMessage(msgPlayersOnly);
             return true;
         }
-
-        Player player = (Player) sender;
 
         // Permission check
         if (!player.hasPermission("maplock.use")) {
@@ -192,12 +170,9 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         }
 
         // Check for anonymous lock
-        boolean anonymous = false;
-        if (args.length > 0 && (args[0].equalsIgnoreCase("anonim") ||
+        boolean anonymous = args.length > 0 && (args[0].equalsIgnoreCase("anonim") ||
                 args[0].equalsIgnoreCase("anonymous") ||
-                args[0].equalsIgnoreCase("anon"))) {
-            anonymous = true;
-        }
+                args[0].equalsIgnoreCase("anon"));
 
         ItemStack modifiedItem = itemInHand.clone();
         modifiedItem.setAmount(1);
@@ -284,7 +259,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         }
 
         ItemStack result = event.getRecipe().getResult();
-        if (result != null && result.getType() == Material.FILLED_MAP) {
+        if (result.getType() == Material.FILLED_MAP) {
             for (ItemStack item : event.getInventory().getMatrix()) {
                 if (item != null && item.getType() == Material.FILLED_MAP) {
                     if (isMapLocked(item)) {
@@ -340,7 +315,8 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             }
         }
 
-        if (event.getCursor() != null && isMapLocked(event.getCursor())) {
+        event.getCursor();
+        if (isMapLocked(event.getCursor())) {
             if (event.getClickedInventory().getType() != InventoryType.PLAYER) {
                 event.setCancelled(true);
                 event.setResult(Event.Result.DENY);
@@ -358,7 +334,6 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
                 if (event.getWhoClicked() instanceof Player) {
                     event.getWhoClicked().sendMessage(msgCannotCopy);
                 }
-                return;
             }
         }
     }
