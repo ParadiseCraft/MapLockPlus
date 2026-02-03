@@ -3,8 +3,10 @@
 # ================================================
 # Configuration file for MapLockPlus plugin
 #
-# Color support: use & for color codes
-# Example: &a - green, &c - red, &7 - gray
+# Color support:
+# - use & for legacy color codes
+# - use HEX format for modern color codes
+# Example: &a - green, <red> - red
 # ================================================
 
 # Language settings
@@ -13,7 +15,10 @@ messages:
   must-hold-map: "&cВи повинні тримати заповнену карту, щоб використати цю команду!"
   not-owner: "&cВи не власник цієї карти! Тільки власник може її розблокувати."
   unlocked: "&aКарту розблоковано! Тепер її можна копіювати."
+  not-locked: "&cЦя карта не заблокована."
   locked: "&aКарту заблоковано! Її більше не можна копіювати."
+  anon-locked: "&aКарту заблоковано анонімно! Її більше не можна копіювати."
+  already-locked: "&cЦя карта вже заблокована! Використовуйте /maplock unlock"
   only-you-unlock: "&7Тільки ви можете розблокувати цю карту."
   cannot-copy: "&cВи не можете копіювати заблоковану карту!"
   config-reloaded: "&aКонфіг успішно перезавантажено!"

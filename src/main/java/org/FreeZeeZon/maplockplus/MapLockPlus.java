@@ -1,7 +1,8 @@
 package org.FreeZeeZon.maplockplus;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bstats.bukkit.Metrics;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -17,6 +18,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.*;
 
@@ -26,23 +30,25 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
     private static final NamespacedKey OWNER_KEY = new NamespacedKey("maplock", "owner");
     private static final NamespacedKey ANONYMOUS_KEY = new NamespacedKey("maplock", "anonymous");
 
-    // Messages from config
-    private String msgPlayersOnly;
-    private String msgMustHoldMap;
-    private String msgNotOwner;
-    private String msgUnlocked;
-    private String msgLocked;
-    private String msgOnlyYouUnlock;
-    private String msgCannotCopy;
-    private String msgConfigReloaded;
-    private String msgNoPermission;
-    private String msgInventoryFull;
+    // Adventure Components
+    private Component msgPlayersOnly;
+    private Component msgMustHoldMap;
+    private Component msgNotOwner;
+    private Component msgUnlocked;
+    private Component msgLocked;
+    private Component msgAnonLocked;
+    private Component msgOnlyYouUnlock;
+    private Component msgAlreadyLocked;
+    private Component msgNotLocked;
+    private Component msgCannotCopy;
+    private Component msgConfigReloaded;
+    private Component msgNoPermission;
 
-    // Lore
-    private List<String> lockedMapLore;
-    private List<String> anonymousMapLore;
+    // Lore settings
+    private List<Component> lockedMapLore;
+    private List<Component> anonymousMapLore;
     private boolean showOwnerInLore;
-    private String ownerFormat;
+    private String ownerFormatRaw;
 
     @Override
     public void onEnable() {
@@ -50,7 +56,6 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         loadMessages();
         getServer().getPluginManager().registerEvents(this, this);
 
-        // Register TabCompleter
         if (getCommand("maplock") != null) {
             Objects.requireNonNull(getCommand("maplock")).setTabCompleter(this);
         }
@@ -66,44 +71,50 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
 
     private void loadMessages() {
         reloadConfig();
-        msgPlayersOnly = colorize(getConfig().getString("messages.players-only", "&cThis command can only be used by players!"));
-        msgMustHoldMap = colorize(getConfig().getString("messages.must-hold-map", "&cYou must hold a filled map to use this command!"));
-        msgNotOwner = colorize(getConfig().getString("messages.not-owner", "&cYou are not the owner of this map!"));
-        msgUnlocked = colorize(getConfig().getString("messages.unlocked", "&aMap unlocked! It can now be copied."));
-        msgLocked = colorize(getConfig().getString("messages.locked", "&aMap locked! It can no longer be copied."));
-        msgOnlyYouUnlock = colorize(getConfig().getString("messages.only-you-unlock", "&7Only you can unlock this map."));
-        msgCannotCopy = colorize(getConfig().getString("messages.cannot-copy", "&cYou cannot copy a locked map!"));
-        msgConfigReloaded = colorize(getConfig().getString("messages.config-reloaded", "&aConfig successfully reloaded!"));
-        msgNoPermission = colorize(getConfig().getString("messages.no-permission", "&cYou don't have permission!"));
-        msgInventoryFull = colorize(getConfig().getString("messages.inventory-full", "&eYour inventory is full! The map was dropped on the ground."));
+
+        // Use Legacy serializer to support '&' from config
+        LegacyComponentSerializer serializer = LegacyComponentSerializer.legacyAmpersand();
+
+        msgPlayersOnly = serializer.deserialize(getConfig().getString("messages.players-only", "&cThis command can only be used by players!"));
+        msgMustHoldMap = serializer.deserialize(getConfig().getString("messages.must-hold-map", "&cYou must hold a filled map!"));
+        msgNotOwner = serializer.deserialize(getConfig().getString("messages.not-owner", "&cYou are not the owner of this map! Only the owner can unlock it."));
+        msgUnlocked = serializer.deserialize(getConfig().getString("messages.unlocked", "&aMap unlocked! It can now be copied."));
+        msgLocked = serializer.deserialize(getConfig().getString("messages.locked", "&aMap locked! It can no longer be copied."));
+        msgOnlyYouUnlock = serializer.deserialize(getConfig().getString("messages.only-you-unlock", "&7Only you can unlock this map."));
+        msgAnonLocked = serializer.deserialize(getConfig().getString("messages.anon-locked", "&aMap anonymously locked! It can no longer be copied."));
+        msgAlreadyLocked = serializer.deserialize(getConfig().getString("messages.already-locked", "&cThis map is already locked! Use /maplock unlock"));
+        msgNotLocked = serializer.deserialize(getConfig().getString("messages.not-locked", "&cThis map is not locked."));
+
+        msgCannotCopy = serializer.deserialize(getConfig().getString("messages.cannot-copy", "&cYou cannot copy a locked map!"));
+        msgConfigReloaded = serializer.deserialize(getConfig().getString("messages.config-reloaded", "&aConfig successfully reloaded!"));
+        msgNoPermission = serializer.deserialize(getConfig().getString("messages.no-permission", "&cYou don't have permission!"));
 
         showOwnerInLore = getConfig().getBoolean("lore.show-owner", true);
-        ownerFormat = colorize(getConfig().getString("lore.owner-format", "&7Owner: &f%owner%"));
+        ownerFormatRaw = getConfig().getString("lore.owner-format", "&7Owner: &f%owner%");
 
         lockedMapLore = new ArrayList<>();
-        getConfig().getStringList("lore.locked-map").forEach(line -> lockedMapLore.add(colorize(line)));
+        getConfig().getStringList("lore.locked-map").forEach(line -> lockedMapLore.add(serializer.deserialize(line)));
 
         anonymousMapLore = new ArrayList<>();
-        getConfig().getStringList("lore.anonymous-map").forEach(line -> anonymousMapLore.add(colorize(line)));
-    }
-
-    private String colorize(String message) {
-        return message == null ? "" : ChatColor.translateAlternateColorCodes('&', message);
+        getConfig().getStringList("lore.anonymous-map").forEach(line -> anonymousMapLore.add(serializer.deserialize(line)));
     }
 
     // ============ TAB COMPLETER ============
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String @NonNull [] args) {
         if (!command.getName().equalsIgnoreCase("maplock")) return Collections.emptyList();
 
         if (args.length == 1) {
             List<String> completions = new ArrayList<>();
             String input = args[0].toLowerCase();
 
-            if ("anon".startsWith(input) || "anonymous".startsWith(input)) completions.add("anon");
-            if (sender.hasPermission("maplock.reload") && "reload".startsWith(input)) completions.add("reload");
+            List<String> options = new ArrayList<>(Arrays.asList("lock", "unlock", "anon", "anonymous"));
+            if (sender.hasPermission("maplock.reload")) options.add("reload");
 
+            for (String option : options) {
+                if (option.startsWith(input)) completions.add(option);
+            }
             return completions;
         }
 
@@ -114,8 +125,8 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
     // ============ COMMAND HANDLER ============
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        // Reload command
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String @NonNull [] args) {
+        // --- RELOAD ---
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("maplock.reload")) {
                 sender.sendMessage(msgNoPermission);
@@ -136,25 +147,44 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
             return true;
         }
 
-        ItemStack itemInHand = player.getInventory().getItemInMainHand();
-        if (itemInHand.getType() != Material.FILLED_MAP) {
-            player.sendMessage(msgMustHoldMap);
-            return true;
+        // --- DETERMINE ACTION ---
+        String action = "lock";
+        if (args.length > 0) {
+            String arg = args[0].toLowerCase();
+            action = switch (arg) {
+                case "unlock" -> "unlock";
+                case "anon", "anonymous", "anonim" -> "anon";
+                case "lock" -> "lock";
+                default -> action;
+            };
         }
 
-        boolean anonymous = args.length > 0 && (args[0].equalsIgnoreCase("anon") || args[0].equalsIgnoreCase("anonymous"));
+        // --- FIND MAP (MainHand -> OffHand) ---
+        ItemStack itemToCheck = player.getInventory().getItemInMainHand();
 
-        ItemStack modifiedItem = itemInHand.clone();
-        modifiedItem.setAmount(1);
+        if (itemToCheck.getType() != Material.FILLED_MAP) {
+            itemToCheck = player.getInventory().getItemInOffHand();
 
-        ItemMeta meta = modifiedItem.getItemMeta();
+            if (itemToCheck.getType() != Material.FILLED_MAP) {
+                player.sendMessage(msgMustHoldMap);
+                return true;
+            }
+        }
+
+        ItemMeta meta = itemToCheck.getItemMeta();
         if (meta == null) return true;
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         String playerUUID = player.getUniqueId().toString();
+        boolean isLocked = container.has(LOCKED_MAP_KEY, PersistentDataType.BYTE);
 
-        if (container.has(LOCKED_MAP_KEY, PersistentDataType.BYTE)) {
-            // UNLOCK
+        // --- UNLOCK LOGIC ---
+        if (action.equals("unlock")) {
+            if (!isLocked) {
+                player.sendMessage(msgNotLocked);
+                return true;
+            }
+
             String ownerUUID = container.get(OWNER_KEY, PersistentDataType.STRING);
 
             if (ownerUUID != null && !ownerUUID.equals(playerUUID) && !player.hasPermission("maplock.admin")) {
@@ -162,47 +192,52 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
                 return true;
             }
 
+            // Remove protection tags
             container.remove(LOCKED_MAP_KEY);
             container.remove(OWNER_KEY);
             container.remove(ANONYMOUS_KEY);
 
-            meta.setLore(null);
+            // Clear Lore
+            meta.lore(null);
 
+            itemToCheck.setItemMeta(meta); // Update item
             player.sendMessage(msgUnlocked);
+            return true;
+        }
+
+        // --- LOCK LOGIC (Normal / Anon) ---
+        if (isLocked) {
+            player.sendMessage(msgAlreadyLocked);
+            return true;
+        }
+
+        boolean isAnon = action.equals("anon");
+
+        container.set(LOCKED_MAP_KEY, PersistentDataType.BYTE, (byte) 1);
+        container.set(OWNER_KEY, PersistentDataType.STRING, playerUUID);
+
+        List<Component> lore = new ArrayList<>();
+
+        if (isAnon) {
+            container.set(ANONYMOUS_KEY, PersistentDataType.BYTE, (byte) 1);
+            lore.addAll(anonymousMapLore);
         } else {
-            // LOCK
-            container.set(LOCKED_MAP_KEY, PersistentDataType.BYTE, (byte) 1);
-            container.set(OWNER_KEY, PersistentDataType.STRING, playerUUID);
-
-            List<String> lore;
-
-            if (anonymous) {
-                container.set(ANONYMOUS_KEY, PersistentDataType.BYTE, (byte) 1);
-                lore = new ArrayList<>(anonymousMapLore);
-            } else {
-                lore = new ArrayList<>(lockedMapLore);
-
-                if (showOwnerInLore) {
-                    lore.add(ownerFormat.replace("%owner%", player.getName()));
-                }
+            lore.addAll(lockedMapLore);
+            if (showOwnerInLore) {
+                String ownerLine = ownerFormatRaw.replace("%owner%", player.getName());
+                lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(ownerLine));
             }
-
-            meta.setLore(lore);
-            player.sendMessage(msgLocked);
-            if (!anonymous) player.sendMessage(msgOnlyYouUnlock);
         }
 
-        modifiedItem.setItemMeta(meta);
+        meta.lore(lore);
+        itemToCheck.setItemMeta(meta);
 
-        itemInHand.setAmount(itemInHand.getAmount() - 1);
-
-        HashMap<Integer, ItemStack> leftovers = player.getInventory().addItem(modifiedItem);
-        if (!leftovers.isEmpty()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), leftovers.get(0));
-            player.sendMessage(msgInventoryFull);
+        player.sendMessage(isAnon ? msgAnonLocked : msgLocked);
+        if (!isAnon) {
+            player.sendMessage(msgOnlyYouUnlock);
         }
-
         return true;
+
     }
 
     // ============ EVENT HANDLERS ============
@@ -211,7 +246,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
     public void onPrepareCraft(PrepareItemCraftEvent event) {
         for (ItemStack item : event.getInventory().getMatrix()) {
             if (isMapLocked(item)) {
-                event.getInventory().setResult(null);
+                event.getInventory().setResult(null); // Block craft result
                 return;
             }
         }
@@ -219,7 +254,6 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryMoveItem(InventoryMoveItemEvent event) {
-        // Якщо предмет намагаються засунути В Crafter
         if (event.getDestination().getType() == InventoryType.CRAFTER) {
             if (isMapLocked(event.getItem())) {
                 event.setCancelled(true);
@@ -231,6 +265,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
     public void onInventoryClick(InventoryClickEvent event) {
         InventoryType type = event.getView().getType();
 
+        // Protect inventories where copying/modification is possible
         boolean isProtectedInventory = type == InventoryType.CARTOGRAPHY ||
                 type == InventoryType.CRAFTER ||
                 type == InventoryType.WORKBENCH ||
@@ -268,7 +303,7 @@ public class MapLockPlus extends JavaPlugin implements Listener, TabCompleter {
         }
     }
 
-    private boolean isMapLocked(ItemStack item) {
+    private boolean isMapLocked(@Nullable ItemStack item) {
         if (item == null || item.getType() != Material.FILLED_MAP) return false;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;

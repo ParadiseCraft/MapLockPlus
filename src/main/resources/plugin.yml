@@ -8,7 +8,7 @@ description: Plugin for locking maps from being copied
 commands:
   maplock:
     description: Lock or unlock a map
-    usage: /<command> [anon|reload]
+    usage: /<command> <lock|unlock|anon|reload>
     aliases: [ml, lockmap]
 
 permissions:
@@ -18,9 +18,13 @@ permissions:
   maplock.reload:
     description: Allows reloading the plugin config
     default: op
+  maplock.admin:
+    description: Grants capability to unlock ANY map (ignoring owner)
+    default: op
   maplock.*:
     description: Grants all MapLock plugin permissions
     default: op
     children:
       maplock.use: true
       maplock.reload: true
+      maplock.admin: true
